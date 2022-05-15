@@ -1,0 +1,44 @@
+hive> CREATE external TABLE hbase_customerinfo(cno int,cname string, orderid int) 
+    > STORED BY 'org.apache.hadoop.hive.hbase.HBaseStorageHandler'
+    > WITH SERDEPROPERTIES ("hbase.columns.mapping"=":key, custinfo:custname, custinfo:orderid")
+    > TBLPROPERTIES("hbase.table.name"="customer");
+OK
+Time taken: 0.107 seconds
+hive> SELECT * from hbase_customerinfo;
+OK
+1	harry	1
+2	ron	2
+3	john	3
+4	sam	4
+
+hive> CREATE external TABLE hbase_orderinfo(orderid int, itemid int, quantity int)
+    > STORED BY 'org.apache.hadoop.hive.hbase.HBaseStorageHandler'
+    > WITH SERDEPROPERTIES("hbase.columns.mapping"=":key, orderinfo:itemid, orderinfo:quantity")
+    > TBLPROPERTIES("hbase.table.name"="customer");
+OK
+Time taken: 0.125 seconds
+
+hive> SELECT c.cno, c.cname, c.orderid from hbase_customerinfo c 
+	JOIN hbase_orderinfo o ON (c.orderid = o.orderid);
+
+hive> from hbase_orderinfo o, hbase_iteminfo i select max(o.quantity*i.itemprice) as price  where o.itemid=i.itemid
+    > ;
+ 
+hive> select o.orderid, i.itemname from hbase_orderinfo o, hbase_iteminfo i where (o.quantity*i.price)=90.0;
+
+
+hive> CREATE INDEX iteminfo_index ON TABLE hbase_iteminfo(itemprice)
+    > AS 'org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler'
+    > WITH DEFERRED REBUILD;
+OK
+Time taken: 0.616 seconds
+hive> show INDEX on hbase_iteminfo;
+OK
+iteminfo_index      	hbase_iteminfo      	itemprice           	default__hbase_iteminfo_iteminfo_index__	compact             	
+Time taken: 0.195 seconds, Fetched: 1 row(s)
+hive> 
+
+hive> from hbase_orderinfo o, hbase_iteminfo i select sum(o.quantity*i.itemprice) as price  where o.itemid=i.itemid
+    > ;
+hive> from hbase_orderinfo o, hbase_iteminfo i select avg(o.quantity*i.itemprice) as price  where o.itemid=i.itemid
+    > ;
